@@ -29,9 +29,9 @@
 import Foundation
 
 
-@available(macOS 11.0, iOS 14.0, watchOS 7.0, tvOS 14.0, *)
-extension Float16: DataRepresentable {
-}
+//@available(macOS 11.0, iOS 14.0, watchOS 7.0, tvOS 14.0, *)
+//extension Float16: DataRepresentable {
+//}
 
 
 //
@@ -52,7 +52,7 @@ public class DataReadStream {
 	
 	private var inputStream: InputStream
 	private let bytes: Int
-	private var offset: Int = 0
+	public var offset: Int = 0
 	
 	public init(data: Data) {
 		self.inputStream = InputStream(data: data)
@@ -112,6 +112,11 @@ public class DataReadStream {
 		let value = try self.readBytes() as UInt32
 		return CFSwapInt32BigToHost(value)
 	}
+
+    public func readle() throws -> UInt32 {
+        let value = try self.readBytes() as UInt32
+        return CFSwapInt32LittleToHost(value)
+    }
 	
 	public func read() throws -> Int64 {
 		let value = try self.readBytes() as UInt64
@@ -130,11 +135,11 @@ public class DataReadStream {
 		let value = try self.readBytes() as CFSwappedFloat64
 		return CFConvertFloat64SwappedToHost(value)
 	}
-	@available(macOS 11.0, iOS 14.0, watchOS 7.0, tvOS 14.0, *)
-	public func read() throws -> Float16 {
-		let binary = try self.read(count: MemoryLayout<Float16>.size)
-		return try binary.instanciate(as: Float16.self)
-	}
+//	@available(macOS 11.0, iOS 14.0, watchOS 7.0, tvOS 14.0, *)
+//	public func read() throws -> Float16 {
+//		let binary = try self.read(count: MemoryLayout<Float16>.size)
+//		return try binary.instanciate(as: Float16.self)
+//	}
 	public func read<T: DataRepresentable>() throws -> T {
 		let binary = try self.read(count: MemoryLayout<T>.size)
 		return try binary.instanciate(as: T.self)
@@ -222,11 +227,11 @@ public class DataWriteStream {
 	public func write(_ value: Float64) throws {
 		try writeBytes(CFConvertFloat64HostToSwapped(value))
 	}
-	@available(macOS 11.0, iOS 14.0, watchOS 7.0, tvOS 14.0, *)
-	public func write(_ value: Float16) throws {
-		let binary = value.dataRepresentation
-		try self.write(binary)
-	}
+//	@available(macOS 11.0, iOS 14.0, watchOS 7.0, tvOS 14.0, *)
+//	public func write(_ value: Float16) throws {
+//		let binary = value.dataRepresentation
+//		try self.write(binary)
+//	}
 	public func write<T: DataRepresentable>(_ value: T) throws {
 		let binary = value.dataRepresentation
 		try self.write(binary)
