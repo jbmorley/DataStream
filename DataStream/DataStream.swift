@@ -113,11 +113,6 @@ public class DataReadStream {
 		return CFSwapInt32BigToHost(value)
 	}
 
-    public func readle() throws -> UInt32 {
-        let value = try self.readBytes() as UInt32
-        return CFSwapInt32LittleToHost(value)
-    }
-	
 	public func read() throws -> Int64 {
 		let value = try self.readBytes() as UInt64
 		return Int64(bitPattern: CFSwapInt64BigToHost(value))
