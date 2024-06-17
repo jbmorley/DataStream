@@ -50,44 +50,75 @@ enum DataStreamError: Error {
 
 public class DataReadStream {
 	
-	private var inputStream: InputStream
+    private var data: Data
+//	private var inputStream: InputStream
 	private let bytes: Int
-	public var offset: Int = 0
-	
+	private var offset: Int = 0
+
 	public init(data: Data) {
-		self.inputStream = InputStream(data: data)
-		self.inputStream.open()
+//		self.inputStream = InputStream(data: data)
+        self.data = Data(data)
+//		self.inputStream.open()
 		self.bytes = data.count
 	}
 	
 	deinit {
-		self.inputStream.close()
+//		self.inputStream.close()
 	}
 	
 	public var hasBytesAvailable: Bool {
-		return self.inputStream.hasBytesAvailable
+//		return self.inputStream.hasBytesAvailable
+        return self.offset < self.data.count
 	}
 	
 	public var bytesAvailable: Int {
 		return self.bytes - self.offset
 	}
 	
-	public func readBytes<T>() throws -> T {
-		let valueSize = MemoryLayout<T>.size
-		var buffer = [UInt8](repeating: 0, count: valueSize)
-		let value: T = try buffer.withUnsafeMutableBytes { mutableRawBufferPointer throws -> T in
-			let bufferPointer: UnsafeMutablePointer<UInt8> = mutableRawBufferPointer.baseAddress!.assumingMemoryBound(to: UInt8.self)
-			if self.inputStream.read(bufferPointer, maxLength: valueSize) != valueSize {
-				throw DataStreamError.readError
-			}
-			return bufferPointer.withMemoryRebound(to: T.self, capacity: 1) {
-				return $0.pointee
-			}
-		}
-		self.offset += valueSize
-		return value
-	}
-	
+//	public func readBytes<T>() throws -> T {
+//		let valueSize = MemoryLayout<T>.size
+//        print(data.count, valueSize, offset, offset+valueSize)
+//        var buffer =  [UInt8](data[offset...offset+valueSize])
+//		let value: T = try buffer.withUnsafeMutableBytes { mutableRawBufferPointer throws -> T in
+//			let bufferPointer: UnsafeMutablePointer<UInt8> = mutableRawBufferPointer.baseAddress!.assumingMemoryBound(to: UInt8.self)
+//			return bufferPointer.withMemoryRebound(to: T.self, capacity: 1) {
+//				return $0.pointee
+//			}
+//		}
+//		self.offset += valueSize
+//		return value
+//	}
+
+    public var count: Int {
+        return self.data.count
+    }
+
+    public func readBytes<T>() throws -> T {
+        let valueSize = MemoryLayout<T>.size
+
+        // Ensure there's enough data left to read
+        guard offset + valueSize <= data.count else {
+            throw NSError(domain: "DataStream", code: 1, userInfo: [NSLocalizedDescriptionKey: "Not enough data to read the expected type"])
+        }
+
+        // Extract the subdata of the required size
+        let subdata = data.subdata(in: offset..<(offset + valueSize))
+
+        // Create a buffer of the same size
+        var buffer = [UInt8](repeating: 0, count: valueSize)
+        subdata.copyBytes(to: &buffer, count: valueSize)
+
+        // Convert buffer to the desired type
+        let value: T = buffer.withUnsafeBytes { rawBufferPointer in
+            rawBufferPointer.load(as: T.self)
+        }
+
+        // Update the offset
+        self.offset += valueSize
+
+        return value
+    }
+
 	public func read() throws -> Int8 {
 		return try self.readBytes() as Int8
 	}
@@ -142,18 +173,24 @@ public class DataReadStream {
 	
 	public func read(count: Int) throws -> Data {
 		var buffer = [UInt8](repeating: 0, count: count)
-		if self.inputStream.read(&buffer, maxLength: count) != count {
-			throw DataStreamError.readError
-		}
+        let result = data[offset..<count+offset]
+//		if self.inputStream.read(&buffer, maxLength: count) != count {
+//			throw DataStreamError.readError
+//		}
 		offset += count
-		return NSData(bytes: buffer, length: buffer.count) as Data
+        return result
+//		return NSData(bytes: buffer, length: buffer.count) as Data
 	}
 	
 	public func read() throws -> Bool {
 		let byte = try self.read() as UInt8
 		return byte != 0
 	}
-	
+
+    public func seek(offset: Int = 0) {
+        self.offset = offset
+    }
+
 }
 
 //
